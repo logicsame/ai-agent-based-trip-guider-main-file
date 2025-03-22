@@ -1,6 +1,6 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from tripplanner.utils.common import PlaceDescriptionRequest
+from services.utils.common import PlaceDescriptionRequest
 from fastapi.responses import HTMLResponse
 import folium
 import logging
@@ -12,11 +12,10 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("GroqAPIManager")
 
 
-app = FastAPI()
+
 
 key_manager = GroqKeyManager()
 
-@app.post("/generate_description", response_model=str)
 async def generate_description(request: PlaceDescriptionRequest):
     try:
         # Generate a description using the Groq API

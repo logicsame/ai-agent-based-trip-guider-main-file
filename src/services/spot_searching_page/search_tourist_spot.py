@@ -1,12 +1,11 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from tripplanner.utils.common import TouristSpot,SearchRequest
+from services.utils.common import TouristSpot,SearchRequest
 import requests
 import folium
 from typing import List, Dict, Optional,Union
 import logging
 
-app = FastAPI()
 
 
 # Set up logging
@@ -15,8 +14,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("GroqAPIManager")
 
 
-@app.post("/search", response_model=List[TouristSpot])
-@app.get("/search")
+
 async def search_tourist_spots(request: SearchRequest):
     try:
         location = request.location

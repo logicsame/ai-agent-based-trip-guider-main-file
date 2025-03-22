@@ -1,13 +1,10 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from tripplanner.utils.common import MapRequest
+from services.utils.common import MapRequest
 from fastapi.responses import HTMLResponse
 import folium
 
 
-app = FastAPI()
-
-@app.post("/map/all", response_class=HTMLResponse)
 async def generate_map_all(request: MapRequest):
     spots = request.spots
     if not spots:

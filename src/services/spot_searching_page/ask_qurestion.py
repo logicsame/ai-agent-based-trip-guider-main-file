@@ -1,6 +1,6 @@
 import fastapi
 from fastapi import FastAPI, HTTPException
-from tripplanner.utils.common import AskQuestionRequest
+from services.utils.common import AskQuestionRequest
 from api_manager import GroqKeyManager
 import logging
 
@@ -8,13 +8,13 @@ import logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("GroqAPIManager")
-app = FastAPI()
+
 
 key_manager = GroqKeyManager()
 
 
 
-@app.post("/ask_question", response_model=str)
+
 async def ask_question(request: AskQuestionRequest):
     try:
         # Debug: Log the incoming request

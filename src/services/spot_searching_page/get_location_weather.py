@@ -1,11 +1,9 @@
 
 
 from fastapi import FastAPI, HTTPException, Query, Depends
-from tripplanner.spot_searching_page import get_weather_data
+from services.spot_searching_page import get_weather_data
 
-app = FastAPI()
 
-@app.get("/weather")
 async def get_location_weather(lat: float, lon: float):
     weather_data = get_weather_data(lat, lon)
     if weather_data:

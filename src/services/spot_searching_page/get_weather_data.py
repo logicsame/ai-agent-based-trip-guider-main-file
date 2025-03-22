@@ -2,7 +2,7 @@ import logging
 import requests
 import time
 from typing import Optional, NamedTuple, Dict, Any
-from tripplanner.utils.common import WeatherData
+from services.utils.common import WeatherData
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 

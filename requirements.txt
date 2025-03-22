@@ -7,4 +7,5 @@ folium
 streamlit-folium
 matplotlib
 groq
+uvicorn
 -e .

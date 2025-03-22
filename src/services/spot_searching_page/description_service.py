@@ -4,7 +4,7 @@ from models.models import PlaceDescriptionRequest
 from fastapi.responses import HTMLResponse
 import folium
 import logging
-from api_manager import GroqKeyManager
+from api_manager.api_manager import GroqKeyManager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 

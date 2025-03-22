@@ -1,4 +1,5 @@
 streamlit
+fastapi
 python-dotenv
 requests
 pandas

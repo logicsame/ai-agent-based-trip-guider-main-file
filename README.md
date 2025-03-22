@@ -42,7 +42,7 @@ The Tourist Spot API is a FastAPI-based service designed to provide information 
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/search" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/search" \
      -H "Content-Type: application/json" \
      -d '{"location": "Paris", "radius": 10}'
 ```
@@ -90,7 +90,7 @@ curl -X POST "http://localhost:8000/search" \
 
 **Example Request:**
 ```bash
-curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
+curl "https://ai-agent-based-trip-guider-main-production.up.railway.app/weather?lat=48.8584&lon=2.2945"
 ```
 
 **Example Response:**
@@ -129,7 +129,7 @@ curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/map/all" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/map/all" \
      -H "Content-Type: application/json" \
      -d '{"spots": [{"id": "123456", "name": "Eiffel Tower", "category": "attraction", "lat": 48.8584, "lon": 2.2945, "description": null, "tags": {"tourism": "attraction"}}], "center_lat": 48.8584, "center_lon": 2.2945, "radius": 5}'
 ```
@@ -199,7 +199,7 @@ curl -X POST "http://localhost:8000/map/selected" \
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/generate_description" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/generate_description" \
      -H "Content-Type: application/json" \
      -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"next_48h": {"rain_chance": true}}}}'
 ```
@@ -234,7 +234,7 @@ The Eiffel Tower in Paris, France, is an iconic iron marvel with stunning city v
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/ask_question" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/ask_question" \
      -H "Content-Type: application/json" \
      -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "question": "Will it rain tomorrow?", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"day1": {"rain_chance": false}, "day2": {"rain_chance": true}}}}'
 ```

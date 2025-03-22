@@ -49,7 +49,66 @@ if 'map_created' not in st.session_state:
 if 'last_search' not in st.session_state:
     st.session_state.last_search = {"location": "", "radius": 5}
 
+def create_spot_map(spot, zoom_level=15):
+    """Create a folium map centered on a specific tourist spot"""
+    m = folium.Map(location=[spot["lat"], spot["lon"]], zoom_start=zoom_level)
+    
+    # Add marker for the spot
+    folium.Marker(
+        location=[spot["lat"], spot["lon"]],
+        popup=f"<b>{spot['name']}</b><br>{spot['category']}",
+        tooltip=spot["name"],
+        icon=folium.Icon(color="red", icon="info-sign")
+    ).add_to(m)
+    
+    return m
 
+def create_spots_map(spots, center_lat, center_lon, radius_km):
+    """Create a folium map with search radius circle and category markers"""
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+    
+    # Add search radius circle
+    folium.Circle(
+        location=[center_lat, center_lon],
+        radius=radius_km * 1000,  # Convert km to meters
+        color='#3186cc',
+        fill=True,
+        fill_color='#3186cc',
+        fill_opacity=0.2,
+        weight=2,
+        opacity=0.8
+    ).add_to(m)
+
+    # Define icons and colors for categories
+    category_config = {
+        "attraction": {"icon": "star", "color": "red"},
+        "viewpoint": {"icon": "camera", "color": "blue"},
+        "museum": {"icon": "university", "color": "purple"},
+        "hotel": {"icon": "bed", "color": "green"},
+        "restaurant": {"icon": "cutlery", "color": "orange"},
+        "park": {"icon": "tree-conifer", "color": "darkgreen"},
+        "beach": {"icon": "tint", "color": "lightblue"},
+        "historic": {"icon": "flag", "color": "darkred"},
+        "default": {"icon": "info-sign", "color": "gray"}
+    }
+
+    # Add markers for all spots
+    for spot in spots:
+        category = spot["category"].lower().split("_")[0]
+        config = category_config.get(category, category_config["default"])
+        
+        folium.Marker(
+            location=[spot["lat"], spot["lon"]],
+            popup=f"<b>{spot['name']}</b><br>{spot['category']}",
+            tooltip=spot['name'],
+            icon=folium.Icon(
+                color=config["color"],
+                icon=config["icon"],
+                prefix='fa'
+            )
+        ).add_to(m)
+
+    return m
 
 
 def get_user_location():
@@ -344,48 +403,53 @@ def main():
             # Spot selection dropdown
             st.markdown("<div class='sub-header'>✨ Select a Tourist Spot</div>", unsafe_allow_html=True)
             spot_options = [f"{spot['name']} ({spot['category']})" for spot in filtered_spots.to_dict("records")]
-        
+    
             selected_option = st.selectbox("Choose a place to get more information", spot_options)
             selected_index = spot_options.index(selected_option)
             selected_spot = filtered_spots.iloc[selected_index].to_dict()
-        
-            # Store selected spot in session state
-            st.session_state.selected_spot = selected_spot
-        
+    
+            # Ensure selected_spot is initialized as an empty dictionary if it doesn't exist or is None
+            if 'selected_spot' not in st.session_state or st.session_state.selected_spot is None:
+                st.session_state.selected_spot = {}
+    
+            # Store selected spot in session state if it has changed
+            if not st.session_state.selected_spot or st.session_state.selected_spot.get("id") != selected_spot.get("id"):
+                st.session_state.selected_spot = selected_spot
+                st.session_state.spot_description = ""  # Clear the previous description
+    
             # Get weather data for the selected spot
             weather_data = get_weather_data(selected_spot["lat"], selected_spot["lon"])
             st.session_state.weather_data = weather_data
-        
+    
             # Create two columns for info and map
             col1, col2 = st.columns([1, 1])
-        
+    
             with col1:
                 st.markdown(f"<div class='card'>", unsafe_allow_html=True)
                 st.markdown(f"<h2>{selected_spot['name']}</h2>", unsafe_allow_html=True)
                 st.markdown(f"<p><strong>Category:</strong> {selected_spot['category'].replace('_', ' ').title()}</p>", unsafe_allow_html=True)
-            
+        
                 # Extract location info from the first search result
                 location_parts = st.session_state.last_search["location"].split(",")
                 city = location_parts[0].strip() if location_parts else "Unknown"
                 country = location_parts[-1].strip() if len(location_parts) > 1 else "Unknown"
-            
+        
                 # Generate description if not already generated for this spot
-                if (not st.session_state.spot_description or 
-                    st.session_state.selected_spot.get("id") != selected_spot.get("id")):
+                if not st.session_state.spot_description:
                     description = generate_spot_description(selected_spot, city, country, weather_data)
                 else:
                     description = st.session_state.spot_description
-            
+        
                 if description:
                     st.markdown(f"<p>{description}</p>", unsafe_allow_html=True)
-            
+        
                 # Weather information
                 if weather_data:
                     st.markdown("<div class='weather-box'>", unsafe_allow_html=True)
                     st.markdown("<h3>Current Weather</h3>", unsafe_allow_html=True)
                     create_weather_widget(weather_data)
                     st.markdown("</div>", unsafe_allow_html=True)
-            
+        
                 # Links for Google Maps directions and search
                 if st.session_state.user_location:
                     directions_url = get_google_maps_direction_url(
@@ -395,12 +459,12 @@ def main():
                         selected_spot["lon"]
                     )
                     st.markdown(f"[🧭 Get Directions on Google Maps]({directions_url})")
-            
+        
                 search_url = get_google_search_url(f"{selected_spot['name']} {city}")
                 st.markdown(f"[🔍 Search on Google]({search_url})")
-            
-                st.markdown("</div>", unsafe_allow_html=True)
         
+                st.markdown("</div>", unsafe_allow_html=True)
+    
             with col2:
                 # Fetch and display the selected spot's map from the backend
                 try:

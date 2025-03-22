@@ -1,6 +1,7 @@
 # Pydantic models
-from typing import List, Dict, Optional,Union
+from typing import Dict, List, Optional, Union
 from pydantic import BaseModel
+
 
 class SearchRequest(BaseModel):
     location: str
@@ -28,6 +29,7 @@ class PlaceDescriptionRequest(BaseModel):
     country: str
     weather_data: Optional[WeatherData] = None
 
+
 class AskQuestionRequest(BaseModel):
     spot_id: str
     spot_name: str
@@ -36,6 +38,7 @@ class AskQuestionRequest(BaseModel):
     country: str
     question: str
     weather_data: Optional[WeatherData] = None
+
 
 class MapRequest(BaseModel):
     spots: List[TouristSpot]

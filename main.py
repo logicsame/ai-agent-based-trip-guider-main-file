@@ -28,17 +28,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import endpoints from services
 @app.get("/weather")
 async def get_location_weather(lat: float, lon: float):
-    try:
-        weather_data = await get_weather_data(lat, lon)
-        if weather_data:
-            return weather_data
-        raise HTTPException(status_code=404, detail="Weather data unavailable")
-    except Exception as e:
-        logger.error(f"Error fetching weather data: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch weather data")
+    weather_data = get_weather_data(lat, lon)
+    if weather_data:
+        return weather_data
+    raise HTTPException(status_code=404, detail="Weather data unavailable")
 
 @app.post("/map/all", response_class=HTMLResponse)
 async def generate_map_all_endpoint(request: MapRequest):
@@ -85,5 +80,5 @@ async def ask_question_endpoint(request: AskQuestionRequest):
 # Run the app
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))  # Use $PORT if available, otherwise default to 8000
+    port = int(os.getenv("PORT", 8000))  
     uvicorn.run(app, host="0.0.0.0", port=port)

@@ -16,6 +16,10 @@ logger = logging.getLogger("GroqAPIManager")
 
 key_manager = GroqKeyManager()
 
+from models.models import PlaceDescriptionRequest, WeatherData
+from typing import Optional
+
+
 async def generate_description(request: PlaceDescriptionRequest):
     try:
         # Generate a description using the Groq API

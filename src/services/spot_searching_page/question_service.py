@@ -15,6 +15,9 @@ key_manager = GroqKeyManager()
 
 
 
+from models.models import AskQuestionRequest, WeatherData
+from typing import Optional
+
 async def ask_question(request: AskQuestionRequest):
     try:
         # Debug: Log the incoming request
@@ -91,14 +94,25 @@ async def ask_question(request: AskQuestionRequest):
                 spot_info['weather_forecast'] = f"Rain {'expected' if current_weather_data.forecast['day1']['rain_chance'] else 'not expected'} in next 24 hours"
 
             # Define the prompt for non-weather questions
-            prompt = f"""You are a local tour guide with deep knowledge about {request.spot_name}, a {request.spot_category.replace('_', ' ')} in {request.location}, {request.country}. 
-            Here's the available information: {spot_info}.
+            prompt = f"""You are a local tour guide with extensive knowledge about {request.spot_name}, a {request.spot_category.replace('_', ' ')} in {request.location}, {request.country}.
+
+            Available information about this place:
+            {spot_info}
+
             A visitor has asked: '{request.question}'
-            Provide a concise, accurate answer (80-100 words) based only on this data and logical inferences from the category and weather. 
-            Avoid speculation beyond the provided information. Answer in a friendly, direct tone as if speaking to the visitor."""
-            
+
+            Respond directly to the visitor in a friendly, conversational tone. Your answer should:
+            - Be concise (80-100 words)
+            - Draw only from the provided information and logical inferences based on the location's category and local weather
+            - Include specific details that enhance the visitor's understanding
+            - Avoid phrases like "we provide" or "we offer" - speak as an individual guide
+            - Skip mentioning data sources or that you're working with limited information
+
+            Imagine you're standing next to them at {request.spot_name}, ready to share your local expertise.
+            """
+
             messages = [
-                {"role": "system", "content": "You are a knowledgeable local tour guide providing authentic, accurate answers about tourist destinations based on given data."},
+                {"role": "system", "content": "You are a knowledgeable local guide with authentic insights about tourist destinations. Provide accurate, personalized responses based solely on the provided information. Focus on being helpful and direct without referring to yourself as a system or service."},
                 {"role": "user", "content": prompt}
             ]
             

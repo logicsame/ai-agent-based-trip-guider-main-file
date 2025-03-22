@@ -86,3 +86,4 @@ def get_weather_data(lat: float, lon: float, max_retries: int = 3, retry_delay: 
                 logger.error(f"Failed to fetch weather data after {max_retries} attempts: {str(e)}")
                 return None
     return None
+

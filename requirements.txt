@@ -1,0 +1,9 @@
+streamlit
+python-dotenv
+requests
+pandas
+folium
+streamlit-folium
+matplotlib
+groq
+-e .

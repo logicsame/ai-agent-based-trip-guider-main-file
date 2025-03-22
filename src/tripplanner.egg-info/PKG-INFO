@@ -1,0 +1,341 @@
+Metadata-Version: 2.2
+Name: tripplanner
+Version: 0.0.0
+Summary: a trip planner
+Home-page: https://github.com/logicsame/ai-agent-based-trip-guider-main-file
+Author: logicsame
+Author-email: logicsamebutversion@gmail.com
+Project-URL: Bug Tracker, https://github.com/logicsame/ai-agent-based-trip-guider-main-file/issues
+License-File: LICENSE
+Dynamic: author
+Dynamic: author-email
+Dynamic: description
+Dynamic: home-page
+Dynamic: project-url
+Dynamic: summary
+
+# Tourist Spot search Page 1  API Documentation
+
+## Overview
+The Tourist Spot API is a FastAPI-based service designed to provide information about tourist spots, including search functionality, detailed descriptions, weather data, and interactive maps. It integrates with external APIs (e.g., Open-Meteo for weather, Overpass API for geospatial data) and uses the Groq API for natural language generation. The API supports CORS for cross-origin requests and includes robust error handling and logging.
+
+- **Base URL:** http://<host>:8000
+- **Authentication:** No authentication required (public API)
+
+## Endpoints
+
+### 1. Search Tourist Spots
+**Endpoint:** `/search`  
+**Method:** POST or GET  
+**Description:** Searches for tourist spots within a specified radius of a given location using the Overpass API.
+
+**Request Body (for POST):**
+```json
+{
+  "location": "string",  // Name of the location (e.g., "Paris")
+  "radius": "integer"    // Radius in kilometers (default: 5)
+}
+```
+
+**Query Parameters (for GET):**
+- `location` (string, required): Name of the location
+- `radius` (integer, optional): Radius in kilometers (default: 5)
+
+**Response:** List of TouristSpot objects
+```json
+[
+  {
+    "id": "string",
+    "name": "string",
+    "category": "string",
+    "lat": "float",
+    "lon": "float",
+    "description": "string|null",
+    "tags": {"key": "value"}
+  }
+]
+```
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/search" \
+     -H "Content-Type: application/json" \
+     -d '{"location": "Paris", "radius": 10}'
+```
+
+**Example Response:**
+```json
+[
+  {
+    "id": "123456",
+    "name": "Eiffel Tower",
+    "category": "attraction",
+    "lat": 48.8584,
+    "lon": 2.2945,
+    "description": null,
+    "tags": {"tourism": "attraction"}
+  }
+]
+```
+
+**Errors:**
+- 404: No location or spots found
+- 500: Internal server error (e.g., API failure)
+
+### 2. Get Weather Data
+**Endpoint:** `/weather`  
+**Method:** GET  
+**Description:** Retrieves current weather and forecast data for a given latitude and longitude using Open-Meteo API.
+
+**Query Parameters:**
+- `lat` (float, required): Latitude
+- `lon` (float, required): Longitude
+
+**Response:** WeatherData object
+```json
+{
+  "temperature": "float",
+  "description": "string",
+  "forecast": {
+    "next_48h": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"},
+    "day1": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"},
+    "day2": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"}
+  }
+}
+```
+
+**Example Request:**
+```bash
+curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
+```
+
+**Example Response:**
+```json
+{
+  "temperature": 15.3,
+  "description": "partly cloudy",
+  "forecast": {
+    "next_48h": {"rain_chance": true, "rain_hours": 5, "max_precipitation": 2.1},
+    "day1": {"rain_chance": true, "rain_hours": 3, "max_precipitation": 1.5},
+    "day2": {"rain_chance": false, "rain_hours": 0, "max_precipitation": 0.0}
+  }
+}
+```
+
+**Errors:**
+- 404: Weather data unavailable
+- 500: Internal server error
+
+### 3. Generate Map (All Spots)
+**Endpoint:** `/map/all`  
+**Method:** POST  
+**Description:** Generates an HTML map with markers for all tourist spots using Folium.
+
+**Request Body:**
+```json
+{
+  "spots": [{"id": "string", "name": "string", "category": "string", "lat": "float", "lon": "float", "description": "string|null", "tags": {"key": "value"}}],
+  "center_lat": "float",
+  "center_lon": "float",
+  "radius": "integer"
+}
+```
+
+**Response:** HTML string (Folium map)
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/map/all" \
+     -H "Content-Type: application/json" \
+     -d '{"spots": [{"id": "123456", "name": "Eiffel Tower", "category": "attraction", "lat": 48.8584, "lon": 2.2945, "description": null, "tags": {"tourism": "attraction"}}], "center_lat": 48.8584, "center_lon": 2.2945, "radius": 5}'
+```
+
+**Example Response:** (Truncated HTML)
+```html
+<div id="map_..."><iframe srcdoc="..."></iframe></div>
+```
+
+**Errors:**
+- 404: No tourist spots provided
+- 500: Internal server error
+
+### 4. Generate Map (Selected Spot)
+**Endpoint:** `/map/selected`  
+**Method:** POST  
+**Description:** Generates an HTML map for a single tourist spot.
+
+**Request Body:** TouristSpot object
+```json
+{
+  "id": "string",
+  "name": "string",
+  "category": "string",
+  "lat": "float",
+  "lon": "float",
+  "description": "string|null",
+  "tags": {"key": "value"}
+}
+```
+
+**Response:** HTML string (Folium map)
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/map/selected" \
+     -H "Content-Type: application/json" \
+     -d '{"id": "123456", "name": "Eiffel Tower", "category": "attraction", "lat": 48.8584, "lon": 2.2945, "description": null, "tags": {"tourism": "attraction"}}'
+```
+
+**Example Response:** (Truncated HTML)
+```html
+<div id="map_..."><iframe srcdoc="..."></iframe></div>
+```
+
+**Errors:**
+- 500: Internal server error
+
+### 5. Generate Description
+**Endpoint:** `/generate_description`  
+**Method:** POST  
+**Description:** Generates a natural language description for a tourist spot using the Groq API.
+
+**Request Body:**
+```json
+{
+  "spot_id": "string",
+  "spot_name": "string",
+  "spot_category": "string",
+  "location": "string",
+  "country": "string",
+  "weather_data": {"temperature": "float", "description": "string", "forecast": {"next_48h": {}, "day1": {}, "day2": {}}} | null
+}
+```
+
+**Response:** String (description)
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/generate_description" \
+     -H "Content-Type: application/json" \
+     -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"next_48h": {"rain_chance": true}}}}'
+```
+
+**Example Response:**
+```text
+The Eiffel Tower in Paris, France, is an iconic iron marvel with stunning city views from its top. Built in 1889, its unique lattice design draws millions yearly. Visitors love climbing or riding the elevator to the observation deck for panoramic photos. With today's partly cloudy weather at 15.3°C, bring a light jacket as it can get breezy up there.
+```
+
+**Errors:**
+- 500: Internal server error (e.g., Groq API failure)
+
+### 6. Ask Question
+**Endpoint:** `/ask_question`  
+**Method:** POST  
+**Description:** Answers a user's question about a tourist spot, leveraging weather data or Groq API for general queries.
+
+**Request Body:**
+```json
+{
+  "spot_id": "string",
+  "spot_name": "string",
+  "spot_category": "string",
+  "location": "string",
+  "country": "string",
+  "question": "string",
+  "weather_data": {"temperature": "float", "description": "string", "forecast": {"next_48h": {}, "day1": {}, "day2": {}}} | null
+}
+```
+
+**Response:** String (answer)
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8000/ask_question" \
+     -H "Content-Type: application/json" \
+     -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "question": "Will it rain tomorrow?", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"day1": {"rain_chance": false}, "day2": {"rain_chance": true}}}}'
+```
+
+**Example Response:**
+```text
+Today looks dry at Eiffel Tower, but tomorrow there's a chance of moderate rain for approximately 3 hours.
+```
+
+**Errors:**
+- 500: Internal server error
+
+## Data Models
+
+### TouristSpot
+```json
+{
+  "id": "string",
+  "name": "string",
+  "category": "string",
+  "lat": "float",
+  "lon": "float",
+  "description": "string|null",
+  "tags": {"key": "string"}
+}
+```
+
+### WeatherData
+```json
+{
+  "temperature": "float",
+  "description": "string",
+  "forecast": {
+    "next_48h": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"},
+    "day1": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"},
+    "day2": {"rain_chance": "boolean", "rain_hours": "integer", "max_precipitation": "float"}
+  }
+}
+```
+
+### SearchRequest
+```json
+{
+  "location": "string",
+  "radius": "integer" // Default: 5
+}
+```
+
+### PlaceDescriptionRequest
+```json
+{
+  "spot_id": "string",
+  "spot_name": "string",
+  "spot_category": "string",
+  "location": "string",
+  "country": "string",
+  "weather_data": "WeatherData|null"
+}
+```
+
+### AskQuestionRequest
+```json
+{
+  "spot_id": "string",
+  "spot_name": "string",
+  "spot_category": "string",
+  "location": "string",
+  "country": "string",
+  "question": "string",
+  "weather_data": "WeatherData|null"
+}
+```
+
+### MapRequest
+```json
+{
+  "spots": ["TouristSpot"],
+  "center_lat": "float",
+  "center_lon": "float",
+  "radius": "integer"
+}
+```
+
+## Error Handling
+- **HTTPException:** Used for client-side errors (e.g., 404) and server-side errors (e.g., 500).
+- **Logging:** Errors are logged with timestamps and details for debugging.
+- **Groq API Fallback:** Rotates through multiple API keys if rate limits are hit.
+

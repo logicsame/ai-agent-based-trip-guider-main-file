@@ -12,7 +12,7 @@ list_of_files = [
     f"src/{project_name}/__init__.py",
     f"src/{project_name}/utils/__init__.py",
     f"src/{project_name}/utils/common.py",
-    f"src/{project_name}/spot_searching_system_p1",
+    
    
 
     "test.py",

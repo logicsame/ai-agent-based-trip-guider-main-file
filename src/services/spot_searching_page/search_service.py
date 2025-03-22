@@ -1,6 +1,6 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from services.utils.common import TouristSpot,SearchRequest
+from models.models import TouristSpot,SearchRequest
 import requests
 import folium
 from typing import List, Dict, Optional,Union

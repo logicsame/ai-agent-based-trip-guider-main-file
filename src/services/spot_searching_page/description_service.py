@@ -1,6 +1,6 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from services.utils.common import PlaceDescriptionRequest
+from models.models import PlaceDescriptionRequest
 from fastapi.responses import HTMLResponse
 import folium
 import logging

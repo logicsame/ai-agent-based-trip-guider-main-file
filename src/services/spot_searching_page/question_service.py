@@ -1,6 +1,6 @@
 import fastapi
 from fastapi import FastAPI, HTTPException
-from services.utils.common import AskQuestionRequest
+from models.models import AskQuestionRequest
 from api_manager import GroqKeyManager
 import logging
 

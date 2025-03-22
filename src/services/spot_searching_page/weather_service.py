@@ -2,7 +2,8 @@ import logging
 import requests
 import time
 from typing import Optional, NamedTuple, Dict, Any
-from services.utils.common import WeatherData
+from models.models import WeatherData
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 

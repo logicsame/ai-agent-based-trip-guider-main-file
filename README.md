@@ -3,7 +3,7 @@
 ## Overview
 The Tourist Spot API is a FastAPI-based service designed to provide information about tourist spots, including search functionality, detailed descriptions, weather data, and interactive maps. It integrates with external APIs (e.g., Open-Meteo for weather, Overpass API for geospatial data) and uses the Groq API for natural language generation. The API supports CORS for cross-origin requests and includes robust error handling and logging.
 
-- **Base URL:** http://<host>:8000
+- **Base URL:** https://ai-agent-based-trip-guider-main-production.up.railway.app
 - **Authentication:** No authentication required (public API)
 
 ## Endpoints

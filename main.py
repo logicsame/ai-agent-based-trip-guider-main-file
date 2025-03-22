@@ -10,7 +10,7 @@ from services.spot_searching_page.weather_service import get_weather_data
 import logging
 from models.models import AskQuestionRequest, MapRequest, PlaceDescriptionRequest, SearchRequest, TouristSpot
 from fastapi.responses import HTMLResponse
-
+import os
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -80,3 +80,10 @@ async def ask_question_endpoint(request: AskQuestionRequest):
     except Exception as e:
         logger.error(f"Error answering question: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to answer question")
+    
+    
+# Run the app
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))  # Use $PORT if available, otherwise default to 8000
+    uvicorn.run(app, host="0.0.0.0", port=port)

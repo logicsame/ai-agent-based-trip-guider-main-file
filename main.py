@@ -1,11 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from services.weather_service import get_weather_data
-from services.map_service import generate_map_all, generate_map_selected
-from services.search_service import search_tourist_spots
-from services.description_service import generate_description
-from services.question_service import ask_question
-from models import SearchRequest, MapRequest, PlaceDescriptionRequest, AskQuestionRequest, TouristSpot
+from services.spot_searching_page.description_service import generate_description
+from services.spot_searching_page.location_weather_services import get_location_weather
+from services.spot_searching_page.map_service import generate_map_all,generate_map_selected
+from services.spot_searching_page.question_service import ask_question  
+from services.spot_searching_page.search_service import search_tourist_spots
+from typing import List
+from services.spot_searching_page.weather_service import get_weather_data
+
+from models.models import SearchRequest, MapRequest, PlaceDescriptionRequest, AskQuestionRequest, TouristSpot
 from fastapi.responses import HTMLResponse
 import logging
 

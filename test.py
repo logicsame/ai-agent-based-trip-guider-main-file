@@ -1,11 +1,15 @@
 import streamlit as st
 import requests
+import json
 import folium
 from streamlit_folium import folium_static
 import pandas as pd
 from geopy.geocoders import Nominatim
 import urllib.parse
+import time
 from datetime import datetime
+import plotly.express as px
+from PIL import Image
 import logging
 
 # Set up logging
@@ -45,66 +49,7 @@ if 'map_created' not in st.session_state:
 if 'last_search' not in st.session_state:
     st.session_state.last_search = {"location": "", "radius": 5}
 
-def create_spot_map(spot, zoom_level=15):
-    """Create a folium map centered on a specific tourist spot"""
-    m = folium.Map(location=[spot["lat"], spot["lon"]], zoom_start=zoom_level)
-    
-    # Add marker for the spot
-    folium.Marker(
-        location=[spot["lat"], spot["lon"]],
-        popup=f"<b>{spot['name']}</b><br>{spot['category']}",
-        tooltip=spot["name"],
-        icon=folium.Icon(color="red", icon="info-sign")
-    ).add_to(m)
-    
-    return m
 
-def create_spots_map(spots, center_lat, center_lon, radius_km):
-    """Create a folium map with search radius circle and category markers"""
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
-    
-    # Add search radius circle
-    folium.Circle(
-        location=[center_lat, center_lon],
-        radius=radius_km * 1000,  # Convert km to meters
-        color='#3186cc',
-        fill=True,
-        fill_color='#3186cc',
-        fill_opacity=0.2,
-        weight=2,
-        opacity=0.8
-    ).add_to(m)
-
-    # Define icons and colors for categories
-    category_config = {
-        "attraction": {"icon": "star", "color": "red"},
-        "viewpoint": {"icon": "camera", "color": "blue"},
-        "museum": {"icon": "university", "color": "purple"},
-        "hotel": {"icon": "bed", "color": "green"},
-        "restaurant": {"icon": "cutlery", "color": "orange"},
-        "park": {"icon": "tree-conifer", "color": "darkgreen"},
-        "beach": {"icon": "tint", "color": "lightblue"},
-        "historic": {"icon": "flag", "color": "darkred"},
-        "default": {"icon": "info-sign", "color": "gray"}
-    }
-
-    # Add markers for all spots
-    for spot in spots:
-        category = spot["category"].lower().split("_")[0]
-        config = category_config.get(category, category_config["default"])
-        
-        folium.Marker(
-            location=[spot["lat"], spot["lon"]],
-            popup=f"<b>{spot['name']}</b><br>{spot['category']}",
-            tooltip=spot['name'],
-            icon=folium.Icon(
-                color=config["color"],
-                icon=config["icon"],
-                prefix='fa'
-            )
-        ).add_to(m)
-
-    return m
 
 
 def get_user_location():

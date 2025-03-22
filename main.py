@@ -7,11 +7,9 @@ from services.spot_searching_page.question_service import ask_question
 from services.spot_searching_page.search_service import search_tourist_spots
 from typing import List
 from services.spot_searching_page.weather_service import get_weather_data
-
-from models.models import SearchRequest, MapRequest, PlaceDescriptionRequest, AskQuestionRequest, TouristSpot
-from fastapi.responses import HTMLResponse
 import logging
-
+from models.models import AskQuestionRequest, MapRequest, PlaceDescriptionRequest, SearchRequest, TouristSpot
+from fastapi.responses import HTMLResponse
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -34,29 +32,29 @@ app.add_middleware(
 async def get_location_weather(lat: float, lon: float):
     weather_data = get_weather_data(lat, lon)
     if weather_data:
-        return weather_data
+        return await weather_data
     raise HTTPException(status_code=404, detail="Weather data unavailable")
 
 @app.post("/map/all", response_class=HTMLResponse)
 async def generate_map_all_endpoint(request: MapRequest):
-    return generate_map_all(request)
+    return await generate_map_all(request)  # Await the coroutine
 
 @app.post("/map/selected", response_class=HTMLResponse)
 async def generate_map_selected_endpoint(spot: TouristSpot):
-    return generate_map_selected(spot)
+    return await generate_map_selected(spot)
 
 @app.post("/search", response_model=List[TouristSpot])
 @app.get("/search")
 async def search_tourist_spots_endpoint(request: SearchRequest):
-    return search_tourist_spots(request)
+    return await search_tourist_spots(request)  # Await the coroutine
 
 @app.post("/generate_description", response_model=str)
 async def generate_description_endpoint(request: PlaceDescriptionRequest):
-    return generate_description(request)
+    return await generate_description(request)  # Await the coroutine
 
 @app.post("/ask_question", response_model=str)
 async def ask_question_endpoint(request: AskQuestionRequest):
-    return ask_question(request)
+    return await ask_question(request)  # Await the coroutine
 
 # Run the FastAPI app
 if __name__ == "__main__":

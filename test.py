@@ -26,7 +26,7 @@ st.set_page_config(
 )
 
 # Define constants
-BACKEND_URL = "http://127.0.0.1:8000/"  # Update with your actual backend URL
+BACKEND_URL = "https://ai-agent-based-trip-guider-main-production.up.railway.app/"  # Update with your actual backend URL
 USER_AGENT = "TouristSpotFinder/1.0"
 
 # Initialize session state variables if they don't exist

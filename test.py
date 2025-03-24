@@ -17,7 +17,6 @@ logging.basicConfig(level=logging.INFO,
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("GroqAPIManager")
 
-
 # Set page configuration
 st.set_page_config(
     page_title="Tourist Spot Finder",
@@ -27,9 +26,8 @@ st.set_page_config(
 )
 
 # Define constants
-BACKEND_URL = "https://ai-agent-based-trip-guider-main-production.up.railway.app/"  # Update with your actual backend URL
+BACKEND_URL = "http://127.0.0.1:8000/"  # Update with your actual backend URL
 USER_AGENT = "TouristSpotFinder/1.0"
-
 
 # Initialize session state variables if they don't exist
 if 'tourist_spots' not in st.session_state:
@@ -48,68 +46,8 @@ if 'map_created' not in st.session_state:
     st.session_state.map_created = False
 if 'last_search' not in st.session_state:
     st.session_state.last_search = {"location": "", "radius": 5}
-
-def create_spot_map(spot, zoom_level=15):
-    """Create a folium map centered on a specific tourist spot"""
-    m = folium.Map(location=[spot["lat"], spot["lon"]], zoom_start=zoom_level)
-    
-    # Add marker for the spot
-    folium.Marker(
-        location=[spot["lat"], spot["lon"]],
-        popup=f"<b>{spot['name']}</b><br>{spot['category']}",
-        tooltip=spot["name"],
-        icon=folium.Icon(color="red", icon="info-sign")
-    ).add_to(m)
-    
-    return m
-
-def create_spots_map(spots, center_lat, center_lon, radius_km):
-    """Create a folium map with search radius circle and category markers"""
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
-    
-    # Add search radius circle
-    folium.Circle(
-        location=[center_lat, center_lon],
-        radius=radius_km * 1000,  # Convert km to meters
-        color='#3186cc',
-        fill=True,
-        fill_color='#3186cc',
-        fill_opacity=0.2,
-        weight=2,
-        opacity=0.8
-    ).add_to(m)
-
-    # Define icons and colors for categories
-    category_config = {
-        "attraction": {"icon": "star", "color": "red"},
-        "viewpoint": {"icon": "camera", "color": "blue"},
-        "museum": {"icon": "university", "color": "purple"},
-        "hotel": {"icon": "bed", "color": "green"},
-        "restaurant": {"icon": "cutlery", "color": "orange"},
-        "park": {"icon": "tree-conifer", "color": "darkgreen"},
-        "beach": {"icon": "tint", "color": "lightblue"},
-        "historic": {"icon": "flag", "color": "darkred"},
-        "default": {"icon": "info-sign", "color": "gray"}
-    }
-
-    # Add markers for all spots
-    for spot in spots:
-        category = spot["category"].lower().split("_")[0]
-        config = category_config.get(category, category_config["default"])
-        
-        folium.Marker(
-            location=[spot["lat"], spot["lon"]],
-            popup=f"<b>{spot['name']}</b><br>{spot['category']}",
-            tooltip=spot['name'],
-            icon=folium.Icon(
-                color=config["color"],
-                icon=config["icon"],
-                prefix='fa'
-            )
-        ).add_to(m)
-
-    return m
-
+if 'use_current_location' not in st.session_state:
+    st.session_state.use_current_location = False
 
 def get_user_location():
     """Get the user's current location based on IP address"""
@@ -193,6 +131,60 @@ def search_tourist_spots(location, radius):
                 return spots, center_lat, center_lon
             else:
                 st.warning(f"No tourist spots found near {location} within {radius} km radius.")
+                return [], None, None
+        else:
+            error_msg = f"Error: {response.status_code}"
+            try:
+                error_data = response.json()
+                if "detail" in error_data:
+                    error_msg = error_data["detail"]
+            except:
+                pass
+            st.error(f"Failed to search for tourist spots: {error_msg}")
+            return [], None, None
+    except Exception as e:
+        st.error(f"Error connecting to backend: {str(e)}")
+        return [], None, None
+
+def search_tourist_spots_with_current_location(lat, lon, radius):
+    """Search for tourist spots using current location coordinates"""
+    try:
+        url = f"{BACKEND_URL}/search_with_current_location"
+        params = {
+            "lat": lat,
+            "lon": lon,
+            "radius": radius
+        }
+        
+        with st.spinner(f"🔍 Searching for tourist spots near your location..."):
+            response = requests.get(url, params=params, timeout=30)
+            
+        if response.status_code == 200:
+            spots = response.json()
+            if spots:
+                st.session_state.tourist_spots = spots
+                
+                # Prepare map request payload
+                map_payload = {
+                    "spots": spots,
+                    "center_lat": lat,
+                    "center_lon": lon,
+                    "radius": radius
+                }
+                
+                # Get map from backend
+                map_response = requests.post(f"{BACKEND_URL}/map/all", json=map_payload)
+                
+                if map_response.status_code == 200:
+                    st.session_state.all_spots_map_html = map_response.text
+                else:
+                    st.error(f"Failed to fetch map: {map_response.status_code}")
+                
+                st.session_state.map_created = True
+                st.session_state.last_search = {"location": "Your Location", "radius": radius}
+                return spots, lat, lon
+            else:
+                st.warning(f"No tourist spots found near your location within {radius} km radius.")
                 return [], None, None
         else:
             error_msg = f"Error: {response.status_code}"
@@ -339,6 +331,47 @@ def create_weather_widget(weather_data):
                 st.markdown("✅ **No rain expected in next 24h**")
 
 def main():
+    # # Custom CSS
+    # st.markdown("""
+    # <style>
+    # .main-header {
+    #     font-size: 2.5rem;
+    #     font-weight: bold;
+    #     color: #1f77b4;
+    #     margin-bottom: 0.5rem;
+    # }
+    # .sub-header {
+    #     font-size: 1.5rem;
+    #     font-weight: bold;
+    #     color: #1f77b4;
+    #     margin: 1rem 0 0.5rem 0;
+    # }
+    # .info-text {
+    #     color: #666;
+    #     margin-bottom: 1rem;
+    # }
+    # .card {
+    #     background-color: #f9f9f9;
+    #     border-radius: 10px;
+    #     padding: 1.5rem;
+    #     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    #     margin-bottom: 1rem;
+    # }
+    # .weather-box {
+    #     background-color: #e6f3ff;
+    #     border-radius: 10px;
+    #     padding: 1rem;
+    #     margin: 1rem 0;
+    # }
+    # .highlight-box {
+    #     background-color: #f0f7ff;
+    #     border-radius: 10px;
+    #     padding: 1.5rem;
+    #     margin: 1rem 0;
+    # }
+    # </style>
+    # """, unsafe_allow_html=True)
+    
     # Header
     st.markdown("<div class='main-header'>🗺️ Tourist Spot Finder</div>", unsafe_allow_html=True)
     st.markdown("<div class='info-text'>Discover amazing places around you, get detailed descriptions, weather information, and directions.</div>", unsafe_allow_html=True)
@@ -350,34 +383,64 @@ def main():
     # Search section
     st.markdown("<div class='sub-header'>🔍 Find Places</div>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([2, 1, 1])
+    # Toggle for current location
+    use_current_location = st.checkbox("Use my current location", value=st.session_state.use_current_location)
+    st.session_state.use_current_location = use_current_location
     
-    with col1:
-        location = st.text_input(
-            "Location", 
-            value=st.session_state.last_search.get("location", st.session_state.user_location.get("name", "") if st.session_state.user_location else ""),
-            placeholder="Enter city, landmark, or region"
-        )
-    
-    with col2:
-        radius = st.number_input(
-    "Search Radius (km)", 
-    min_value=1, 
-    max_value=50, 
-    value=max(1, st.session_state.last_search.get("radius", 5)),  # Ensure radius is at least 1
-    step=1
-)
-    
-    with col3:
-        search_button = st.button("🔍 Search Places", use_container_width=True)
-    
-    # Process search
-    if search_button and location:
-        spots, center_lat, center_lon = search_tourist_spots(location, radius)
-        if spots and center_lat and center_lon:
-            # Display number of spots found
-            st.success(f"Found {len(spots)} tourist spots near {location}")
-    
+    if use_current_location:
+        if st.session_state.user_location:
+            st.info(f"Using your current location: {st.session_state.user_location.get('name', 'Unknown')}")
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                radius = st.number_input(
+                    "Search Radius (km)", 
+                    min_value=1, 
+                    max_value=50, 
+                    value=max(1, st.session_state.last_search.get("radius", 5)),
+                    step=1
+                )
+            
+            with col2:
+                search_button = st.button("🔍 Search Places Near Me", use_container_width=True)
+            
+            if search_button:
+                spots, center_lat, center_lon = search_tourist_spots_with_current_location(
+                    st.session_state.user_location["lat"],
+                    st.session_state.user_location["lon"],
+                    radius
+                )
+                if spots and center_lat and center_lon:
+                    st.success(f"Found {len(spots)} tourist spots near your location")
+        else:
+            st.warning("Could not determine your current location. Please enable location services or enter a location manually.")
+    else:
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
+        with col1:
+            location = st.text_input(
+                "Location", 
+                value=st.session_state.last_search.get("location", st.session_state.user_location.get("name", "") if st.session_state.user_location else ""),
+                placeholder="Enter city, landmark, or region"
+            )
+        
+        with col2:
+            radius = st.number_input(
+                "Search Radius (km)", 
+                min_value=1, 
+                max_value=50, 
+                value=max(1, st.session_state.last_search.get("radius", 5)),
+                step=1
+            )
+        
+        with col3:
+            search_button = st.button("🔍 Search Places", use_container_width=True)
+        
+        if search_button and location:
+            spots, center_lat, center_lon = search_tourist_spots(location, radius)
+            if spots and center_lat and center_lon:
+                st.success(f"Found {len(spots)} tourist spots near {location}")
+
     if st.session_state.tourist_spots:
         # Display the map from backend
         st.markdown("<div class='sub-header'>📍 All Tourist Spots</div>", unsafe_allow_html=True)
@@ -404,7 +467,7 @@ def main():
             st.markdown("<div class='sub-header'>✨ Select a Tourist Spot</div>", unsafe_allow_html=True)
             spot_options = [f"{spot['name']} ({spot['category']})" for spot in filtered_spots.to_dict("records")]
     
-            selected_option = st.selectbox("Choose a place to get more information", spot_options)
+            selected_option = st.selectbox("Choose a place to get more information", spot_options, key="spot_selector")
             selected_index = spot_options.index(selected_option)
             selected_spot = filtered_spots.iloc[selected_index].to_dict()
     
@@ -429,14 +492,18 @@ def main():
                 st.markdown(f"<h2>{selected_spot['name']}</h2>", unsafe_allow_html=True)
                 st.markdown(f"<p><strong>Category:</strong> {selected_spot['category'].replace('_', ' ').title()}</p>", unsafe_allow_html=True)
         
-                # Extract location info from the first search result
-                location_parts = st.session_state.last_search["location"].split(",")
-                city = location_parts[0].strip() if location_parts else "Unknown"
-                country = location_parts[-1].strip() if len(location_parts) > 1 else "Unknown"
+                # Extract location info
+                if st.session_state.use_current_location:
+                    location_name = "Your Location"
+                    country = st.session_state.user_location.get("name", "Unknown").split(",")[-1].strip()
+                else:
+                    location_parts = st.session_state.last_search["location"].split(",")
+                    location_name = location_parts[0].strip() if location_parts else "Unknown"
+                    country = location_parts[-1].strip() if len(location_parts) > 1 else "Unknown"
         
                 # Generate description if not already generated for this spot
                 if not st.session_state.spot_description:
-                    description = generate_spot_description(selected_spot, city, country, weather_data)
+                    description = generate_spot_description(selected_spot, location_name, country, weather_data)
                 else:
                     description = st.session_state.spot_description
         
@@ -460,7 +527,7 @@ def main():
                     )
                     st.markdown(f"[🧭 Get Directions on Google Maps]({directions_url})")
         
-                search_url = get_google_search_url(f"{selected_spot['name']} {city}")
+                search_url = get_google_search_url(f"{selected_spot['name']} {location_name}")
                 st.markdown(f"[🔍 Search on Google]({search_url})")
         
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -499,7 +566,7 @@ def main():
             user_question = st.text_input("Your question", value=selected_suggestion if selected_suggestion else "", placeholder="E.g., What is the best time to visit?")
         
             if st.button("📝 Ask Question", use_container_width=True) and user_question:
-                answer = ask_question_about_spot(selected_spot, city, country, user_question, weather_data)
+                answer = ask_question_about_spot(selected_spot, location_name, country, user_question, weather_data)
                 if answer:
                     st.markdown("<div class='highlight-box'>", unsafe_allow_html=True)
                     st.markdown(f"<p><strong>Q:</strong> {user_question}</p>", unsafe_allow_html=True)
@@ -514,19 +581,19 @@ def main():
                         st.markdown(f"<p><strong>A:</strong> {item['answer']}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><small>Asked at {item['timestamp']}</small></p>", unsafe_allow_html=True)
                         st.markdown("<hr>", unsafe_allow_html=True)
-            else:
-                st.warning("No places found with the selected filter. Try a different category.")
+        else:
+            st.warning("No places found with the selected filter. Try a different category.")
     else:
         # Show welcome message and instructions if no search has been performed yet
         st.markdown("<div class='highlight-box'>", unsafe_allow_html=True)
         st.markdown("### 👋 Welcome to Tourist Spot Finder!")
         st.markdown("""
         Discover interesting places around any location:
-        1. Enter a location name (city, landmark, region)
+        1. Choose to use your current location or enter a location manually
         2. Set your preferred search radius (in kilometers)
         3. Click "Search Places" to find tourist spots
         4. Select a spot to get detailed information and directions
-    5. Ask questions about the selected place
+        5. Ask questions about the selected place
         """)
         st.markdown("</div>", unsafe_allow_html=True)
 

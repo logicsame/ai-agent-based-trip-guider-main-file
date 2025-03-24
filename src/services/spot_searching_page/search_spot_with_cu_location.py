@@ -1,12 +1,10 @@
 import fastapi
 from fastapi import FastAPI, HTTPException, Query, Depends
-from models.models import TouristSpot,SearchRequest
+from models.models import TouristSpot, SearchRequest
 import requests
 import folium
-from typing import List, Dict, Optional,Union
+from typing import List, Dict, Optional, Union
 import logging
-
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -14,33 +12,33 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("GroqAPIManager")
 
 
-async def search_tourist_spots(request: SearchRequest):
+async def search_tourist_spots_with_current_location(request: SearchRequest):
     try:
-        location = request.location
+        # Instead of using location string, we'll use latitude and longitude directly
+        lat = request.lat
+        lon = request.lon
         radius = request.radius
         radius_meters = radius * 1000
-
-        # Step 1: Get coordinates for the location using Nominatim
-        nominatim_url = f"https://nominatim.openstreetmap.org/search?q={location}&format=json"
-        response = requests.get(nominatim_url, headers={'User-Agent': 'TouristApp/1.0'}, timeout=10)
-        
-        if response.status_code != 200:
-            logger.error(f"Failed to fetch coordinates: {response.status_code} - {response.text}")
-            raise HTTPException(status_code=500, detail="Failed to fetch coordinates from Nominatim.")
-
-        data = response.json()
-        if not data:
-            logger.error(f"No location found for '{location}'.")
-            raise HTTPException(status_code=404, detail=f"No location found for '{location}'.")
-
-        lat = float(data[0]['lat'])
-        lon = float(data[0]['lon'])
-        country = data[0].get('display_name', '').split(',')[-1].strip()
         
         # Adjust timeout based on radius size
         timeout_seconds = min(60, 20 + (radius // 10) * 5)
         
-        # Step 2: Query Overpass API for tourist spots - Primary query
+        # Use Nominatim reverse geocoding to get country/location info (optional)
+        try:
+            nominatim_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
+            response = requests.get(nominatim_url, headers={'User-Agent': 'TouristApp/1.0'}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                country = data.get('address', {}).get('country', '')
+            else:
+                logger.warning(f"Failed to get reverse geocoding information: {response.status_code}")
+                country = ''
+        except Exception as e:
+            logger.warning(f"Error in reverse geocoding: {str(e)}")
+            country = ''
+        
+        # Step 1: Query Overpass API for tourist spots - Primary query
         overpass_url = "https://overpass-api.de/api/interpreter"
         query = f"""
                     [out:json][timeout:{timeout_seconds}];

@@ -3,6 +3,14 @@ from typing import Dict, List, Optional, Union
 from pydantic import BaseModel
 
 
+
+
+class SearchRequest1(BaseModel):
+    location: Optional[str] = None  # Make location optional
+    lat: float
+    lon: float
+    radius: int
+
 class SearchRequest(BaseModel):
     location: str
     radius: int = 5  # Default to 5km

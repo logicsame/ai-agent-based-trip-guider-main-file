@@ -5,10 +5,11 @@ from services.spot_searching_page.location_weather_services import get_location_
 from services.spot_searching_page.map_service import generate_map_all, generate_map_selected
 from services.spot_searching_page.question_service import ask_question
 from services.spot_searching_page.search_service import search_tourist_spots
+from services.spot_searching_page.search_spot_with_cu_location import search_tourist_spots_with_current_location
 from typing import List
 from services.spot_searching_page.weather_service import get_weather_data
 import logging
-from models.models import AskQuestionRequest, MapRequest, PlaceDescriptionRequest, SearchRequest, TouristSpot
+from models.models import AskQuestionRequest, MapRequest, PlaceDescriptionRequest, SearchRequest, TouristSpot,SearchRequest1
 from fastapi.responses import HTMLResponse
 import os
 # Set up logging
@@ -59,6 +60,18 @@ async def search_tourist_spots_endpoint(request: SearchRequest):
     except Exception as e:
         logger.error(f"Error searching tourist spots: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to search tourist spots")
+    
+# In your FastAPI backend code
+@app.get("/search_with_current_location", response_model=List[TouristSpot])
+async def search_tourist_spots_with_current_location_endpoint(lat: float, lon: float, radius: int = 10):
+    try:
+        # Create SearchRequest without 'location'
+        request = SearchRequest1(lat=lat, lon=lon, radius=radius)
+        spots = await search_tourist_spots_with_current_location(request)
+        return spots
+    except Exception as e:
+        logger.error(f"Error searching tourist spots: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/generate_description", response_model=str)
 async def generate_description_endpoint(request: PlaceDescriptionRequest):

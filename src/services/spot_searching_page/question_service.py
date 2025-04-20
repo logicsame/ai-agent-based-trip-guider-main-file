@@ -119,7 +119,7 @@ async def ask_question(request: AskQuestionRequest):
             # Call the LLM
             completion = key_manager.execute_with_fallback(
                 lambda client, msgs: client.chat.completions.create(
-                    model="llama-3.3-70b-specdec",
+                    model="meta-llama/llama-4-maverick-17b-128e-instruct",
                     messages=msgs,
                     temperature=0.3,
                     max_tokens=150,

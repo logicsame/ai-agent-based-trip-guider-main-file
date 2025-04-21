@@ -10,4 +10,5 @@ groq
 uvicorn
 bson
 bcrypt
+jwt
 -e .

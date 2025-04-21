@@ -11,4 +11,5 @@ uvicorn
 bson
 bcrypt
 jwt
+jose
 -e .

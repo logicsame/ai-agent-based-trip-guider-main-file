@@ -8,7 +8,7 @@ streamlit-folium
 matplotlib
 groq
 uvicorn
-bson
+bson==0.5.10
 bcrypt
 python-jose>=3.3.0
 PyJWT>=2.0.0

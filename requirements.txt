@@ -9,4 +9,5 @@ matplotlib
 groq
 uvicorn
 bson
+bcrypt
 -e .

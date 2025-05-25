@@ -8,4 +8,10 @@ streamlit-folium
 matplotlib
 groq
 uvicorn
+pymongo>=4.0.0
+bcrypt
+python-jose>=3.3.0
+PyJWT>=2.0.0
+pydantic[email]
+python-multipart
 -e .

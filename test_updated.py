@@ -11,6 +11,7 @@ from datetime import datetime
 import plotly.express as px
 from PIL import Image
 import logging
+from services.auth.social_interface import SocialMediaInterface
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -28,6 +29,9 @@ st.set_page_config(
 # Define constants
 BACKEND_URL = "http://127.0.0.1:8000/"  # Update with your actual backend URL
 USER_AGENT = "TouristSpotFinder/1.0"
+
+# Initialize social media interface
+social_interface = SocialMediaInterface(backend_url=BACKEND_URL)
 
 # Initialize session state variables if they don't exist
 if 'tourist_spots' not in st.session_state:
@@ -48,6 +52,8 @@ if 'last_search' not in st.session_state:
     st.session_state.last_search = {"location": "", "radius": 5}
 if 'use_current_location' not in st.session_state:
     st.session_state.use_current_location = False
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = "info"
 
 def get_user_location():
     """Get the user's current location based on IP address"""
@@ -372,6 +378,9 @@ def main():
     # </style>
     # """, unsafe_allow_html=True)
     
+    # Render authentication UI in sidebar
+    social_interface.render_auth_ui()
+    
     # Header
     st.markdown("<div class='main-header'>🗺️ Tourist Spot Finder</div>", unsafe_allow_html=True)
     st.markdown("<div class='info-text'>Discover amazing places around you, get detailed descriptions, weather information, and directions.</div>", unsafe_allow_html=True)
@@ -434,172 +443,165 @@ def main():
             )
         
         with col3:
-            search_button = st.button("🔍 Search Places", use_container_width=True)
+            search_button = st.button("🔍 Search", use_container_width=True)
         
         if search_button and location:
             spots, center_lat, center_lon = search_tourist_spots(location, radius)
             if spots and center_lat and center_lon:
                 st.success(f"Found {len(spots)} tourist spots near {location}")
-
+    
+    # Display map if available
+    if st.session_state.map_created and hasattr(st.session_state, 'all_spots_map_html'):
+        st.markdown("<div class='sub-header'>🗺️ Map View</div>", unsafe_allow_html=True)
+        st.components.v1.html(st.session_state.all_spots_map_html, height=400)
+    
+    # Display tourist spots
     if st.session_state.tourist_spots:
-        # Display the map from backend
-        st.markdown("<div class='sub-header'>📍 All Tourist Spots</div>", unsafe_allow_html=True)
-        if 'all_spots_map_html' in st.session_state and st.session_state.all_spots_map_html:
-            st.components.v1.html(st.session_state.all_spots_map_html, width=1150, height=500)
-        else:
-            st.warning("Map not available")
-
-        # Convert spot list to DataFrame for easier filtering and display
-        spots_df = pd.DataFrame(st.session_state.tourist_spots)
+        st.markdown("<div class='sub-header'>📍 Tourist Spots</div>", unsafe_allow_html=True)
+        
+        # Create a grid of cards for tourist spots
+        cols = st.columns(3)
+        for i, spot in enumerate(st.session_state.tourist_spots):
+            with cols[i % 3]:
+                with st.container():
+                    st.markdown(f"### {spot['name']}")
+                    st.markdown(f"**Category:** {spot['category']}")
+                    
+                    # Button to view details
+                    if st.button(f"View Details", key=f"view_{spot['id']}"):
+                        st.session_state.selected_spot = spot
+                        
+                        # Get weather data for the spot
+                        weather_data = get_weather_data(spot["lat"], spot["lon"])
+                        st.session_state.weather_data = weather_data
+                        
+                        # Generate description if not already generated
+                        if not st.session_state.spot_description or st.session_state.selected_spot["id"] != spot["id"]:
+                            location = st.session_state.last_search.get("location", "")
+                            country = location.split(",")[-1].strip() if "," in location else location
+                            generate_spot_description(spot, location, country, weather_data)
+                        
+                        # Reset question history when selecting a new spot
+                        if st.session_state.selected_spot["id"] != spot["id"]:
+                            st.session_state.question_history = []
+                        
+                        # Reset active tab
+                        st.session_state.active_tab = "info"
+                        
+                        # Rerun to update UI
+                        st.rerun()
     
-        # Add category filter
-        categories = ["All Categories"] + sorted(spots_df["category"].unique().tolist())
-        selected_category = st.selectbox("Filter by Category", categories)
-    
-        if selected_category != "All Categories":
-            filtered_spots = spots_df[spots_df["category"] == selected_category]
-        else:
-            filtered_spots = spots_df
-    
-        # Display the filtered spots
-        if filtered_spots.shape[0] > 0:
-            # Spot selection dropdown
-            st.markdown("<div class='sub-header'>✨ Select a Tourist Spot</div>", unsafe_allow_html=True)
-            spot_options = [f"{spot['name']} ({spot['category']})" for spot in filtered_spots.to_dict("records")]
-    
-            selected_option = st.selectbox("Choose a place to get more information", spot_options, key="spot_selector")
-            selected_index = spot_options.index(selected_option)
-            selected_spot = filtered_spots.iloc[selected_index].to_dict()
-    
-            # Ensure selected_spot is initialized as an empty dictionary if it doesn't exist or is None
-            if 'selected_spot' not in st.session_state or st.session_state.selected_spot is None:
-                st.session_state.selected_spot = {}
-    
-            # Store selected spot in session state if it has changed
-            if not st.session_state.selected_spot or st.session_state.selected_spot.get("id") != selected_spot.get("id"):
-                st.session_state.selected_spot = selected_spot
-                st.session_state.spot_description = ""  # Clear the previous description
-    
-            # Get weather data for the selected spot
-            weather_data = get_weather_data(selected_spot["lat"], selected_spot["lon"])
-            st.session_state.weather_data = weather_data
-    
-            # Create two columns for info and map
-            col1, col2 = st.columns([1, 1])
-    
+    # Display selected spot details
+    if st.session_state.selected_spot:
+        spot = st.session_state.selected_spot
+        
+        st.markdown(f"<div class='sub-header'>🏠 {spot['name']}</div>", unsafe_allow_html=True)
+        st.markdown(f"**Category:** {spot['category']}")
+        
+        # Create tabs for different sections
+        tab_info, tab_map, tab_qa, tab_social = st.tabs(["📝 Information", "🗺️ Map", "❓ Q&A", "👥 Social"])
+        
+        # Set active tab based on session state
+        if st.session_state.active_tab == "info":
+            tab_info.active = True
+        elif st.session_state.active_tab == "map":
+            tab_map.active = True
+        elif st.session_state.active_tab == "qa":
+            tab_qa.active = True
+        elif st.session_state.active_tab == "social":
+            tab_social.active = True
+        
+        with tab_info:
+            st.session_state.active_tab = "info"
+            
+            # Weather information
+            if st.session_state.weather_data:
+                st.markdown("### Current Weather")
+                create_weather_widget(st.session_state.weather_data)
+            
+            # Spot description
+            if st.session_state.spot_description:
+                st.markdown("### About This Place")
+                st.markdown(st.session_state.spot_description)
+            
+            # External links
+            st.markdown("### External Links")
+            col1, col2 = st.columns(2)
+            
             with col1:
-                st.markdown(f"<div class='card'>", unsafe_allow_html=True)
-                st.markdown(f"<h2>{selected_spot['name']}</h2>", unsafe_allow_html=True)
-                st.markdown(f"<p><strong>Category:</strong> {selected_spot['category'].replace('_', ' ').title()}</p>", unsafe_allow_html=True)
-        
-                # Extract location info
-                if st.session_state.use_current_location:
-                    location_name = "Your Location"
-                    country = st.session_state.user_location.get("name", "Unknown").split(",")[-1].strip()
-                else:
-                    location_parts = st.session_state.last_search["location"].split(",")
-                    location_name = location_parts[0].strip() if location_parts else "Unknown"
-                    country = location_parts[-1].strip() if len(location_parts) > 1 else "Unknown"
-        
-                # Generate description if not already generated for this spot
-                if not st.session_state.spot_description:
-                    description = generate_spot_description(selected_spot, location_name, country, weather_data)
-                else:
-                    description = st.session_state.spot_description
-        
-                if description:
-                    st.markdown(f"<p>{description}</p>", unsafe_allow_html=True)
-        
-                # Weather information
-                if weather_data:
-                    st.markdown("<div class='weather-box'>", unsafe_allow_html=True)
-                    st.markdown("<h3>Current Weather</h3>", unsafe_allow_html=True)
-                    create_weather_widget(weather_data)
-                    st.markdown("</div>", unsafe_allow_html=True)
-        
-                # Links for Google Maps directions and search
                 if st.session_state.user_location:
                     directions_url = get_google_maps_direction_url(
                         st.session_state.user_location["lat"],
                         st.session_state.user_location["lon"],
-                        selected_spot["lat"],
-                        selected_spot["lon"]
+                        spot["lat"],
+                        spot["lon"]
                     )
-                    st.markdown(f"[🧭 Get Directions on Google Maps]({directions_url})")
-        
-                search_url = get_google_search_url(f"{selected_spot['name']} {location_name}")
+                    st.markdown(f"[🚗 Get Directions]({directions_url})")
+            
+            with col2:
+                search_url = get_google_search_url(f"{spot['name']} {st.session_state.last_search.get('location', '')}")
                 st.markdown(f"[🔍 Search on Google]({search_url})")
         
-                st.markdown("</div>", unsafe_allow_html=True)
-    
-            with col2:
-                # Fetch and display the selected spot's map from the backend
-                try:
-                    map_response = requests.post(f"{BACKEND_URL}/map/selected", json=selected_spot)
-                    if map_response.status_code == 200:
-                        st.components.v1.html(map_response.text, width=550, height=400)
-                    else:
-                        st.warning("Map not available for this spot")
-                except Exception as e:
-                    st.error(f"Error fetching map: {str(e)}")
+        with tab_map:
+            st.session_state.active_tab = "map"
+            
+            # Get detailed map for the selected spot
+            try:
+                map_response = requests.post(f"{BACKEND_URL}/map/selected", json=spot)
+                
+                if map_response.status_code == 200:
+                    st.components.v1.html(map_response.text, height=400)
+                else:
+                    st.error("Failed to load detailed map")
+            except Exception as e:
+                st.error(f"Error loading map: {str(e)}")
         
-            # Ask a question section
-            st.markdown("<div class='sub-header'>❓ Ask About This Place</div>", unsafe_allow_html=True)
-            st.markdown("<p class='info-text'>Ask anything about this place, activities, best time to visit, or weather conditions.</p>", unsafe_allow_html=True)
-        
-            # Suggestion chips
-            suggestion_cols = st.columns(4)
-            suggestions = [
-                "What is the best time to visit?",
-                "Any chances of rain today?",
-                "What activities can I do here?",
-                "Is this place family-friendly?"
-            ]
-        
-            selected_suggestion = None
-            for i, suggestion in enumerate(suggestions):
-                with suggestion_cols[i]:
-                    if st.button(suggestion, key=f"sugg_{i}"):
-                        selected_suggestion = suggestion
-        
+        with tab_qa:
+            st.session_state.active_tab = "qa"
+            
+            st.markdown("### Ask About This Place")
+            st.markdown("Ask any question about this tourist spot, local customs, best time to visit, etc.")
+            
             # Question input
-            user_question = st.text_input("Your question", value=selected_suggestion if selected_suggestion else "", placeholder="E.g., What is the best time to visit?")
-        
-            if st.button("📝 Ask Question", use_container_width=True) and user_question:
-                answer = ask_question_about_spot(selected_spot, location_name, country, user_question, weather_data)
-                if answer:
-                    st.markdown("<div class='highlight-box'>", unsafe_allow_html=True)
-                    st.markdown(f"<p><strong>Q:</strong> {user_question}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><strong>A:</strong> {answer}</p>", unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-        
-            # Question history
+            question = st.text_input("Your Question", key="question_input")
+            if st.button("Ask"):
+                if question:
+                    location = st.session_state.last_search.get("location", "")
+                    country = location.split(",")[-1].strip() if "," in location else location
+                    answer = ask_question_about_spot(
+                        spot, 
+                        location, 
+                        country, 
+                        question, 
+                        st.session_state.weather_data
+                    )
+                    if answer:
+                        st.success("Question answered!")
+                        # Clear input
+                        st.session_state.question_input = ""
+                        # Rerun to update UI
+                        st.rerun()
+                else:
+                    st.warning("Please enter a question")
+            
+            # Display question history
             if st.session_state.question_history:
-                with st.expander("Previous Questions & Answers", expanded=False):
-                    for item in reversed(st.session_state.question_history[-5:]):
-                        st.markdown(f"<p><strong>Q:</strong> {item['question']}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><strong>A:</strong> {item['answer']}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><small>Asked at {item['timestamp']}</small></p>", unsafe_allow_html=True)
-                        st.markdown("<hr>", unsafe_allow_html=True)
-        else:
-            st.warning("No places found with the selected filter. Try a different category.")
-    else:
-        # Show welcome message and instructions if no search has been performed yet
-        st.markdown("<div class='highlight-box'>", unsafe_allow_html=True)
-        st.markdown("### 👋 Welcome to Tourist Spot Finder!")
-        st.markdown("""
-        Discover interesting places around any location:
-        1. Choose to use your current location or enter a location manually
-        2. Set your preferred search radius (in kilometers)
-        3. Click "Search Places" to find tourist spots
-        4. Select a spot to get detailed information and directions
-        5. Ask questions about the selected place
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# Footer
-st.markdown("---")
-st.markdown("<div style='text-align: center; color: gray;'>© 2025 Tourist Spot Finder | Created with Streamlit</div>", unsafe_allow_html=True)
+                st.markdown("### Previous Questions")
+                for item in reversed(st.session_state.question_history):
+                    with st.expander(f"Q: {item['question']} ({item['timestamp']})"):
+                        st.markdown(f"**A:** {item['answer']}")
+        
+        with tab_social:
+            st.session_state.active_tab = "social"
+            
+            # Social media interface for the selected spot
+            st.markdown("### Traveler Experiences")
+            
+            # Create post section
+            social_interface.render_post_creation_ui(spot)
+            
+            # Display posts for this spot
+            social_interface.render_posts_for_spot(spot["id"])
 
 if __name__ == "__main__":
     main()

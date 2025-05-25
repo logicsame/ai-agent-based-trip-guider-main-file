@@ -19,7 +19,7 @@ Dynamic: summary
 ## Overview
 The Tourist Spot API is a FastAPI-based service designed to provide information about tourist spots, including search functionality, detailed descriptions, weather data, and interactive maps. It integrates with external APIs (e.g., Open-Meteo for weather, Overpass API for geospatial data) and uses the Groq API for natural language generation. The API supports CORS for cross-origin requests and includes robust error handling and logging.
 
-- **Base URL:** http://<host>:8000
+- **Base URL:** https://ai-agent-based-trip-guider-main-production.up.railway.app
 - **Authentication:** No authentication required (public API)
 
 ## Endpoints
@@ -58,7 +58,7 @@ The Tourist Spot API is a FastAPI-based service designed to provide information 
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/search" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/search" \
      -H "Content-Type: application/json" \
      -d '{"location": "Paris", "radius": 10}'
 ```
@@ -82,7 +82,79 @@ curl -X POST "http://localhost:8000/search" \
 - 404: No location or spots found
 - 500: Internal server error (e.g., API failure)
 
-### 2. Get Weather Data
+
+### 2. Search Tourist Spots with current location
+**Endpoint:** `GET /search_with_current_location`  
+**Method:** POST or GET  
+**Description:** Searches for tourist spots within a specified radius of a a current location using the Overpass API.
+
+**Request Body (for POST):**
+#### Request Parameters
+
+| Parameter | Type   | Required | Default | Description                          |
+|-----------|--------|----------|---------|--------------------------------------|
+| `lat`     | float  | Yes      | -       | Latitude (decimal degrees)           |
+| `lon`     | float  | Yes      | -       | Longitude (decimal degrees)          |
+| `radius`  | int    | No       | 10      | Search radius in kilometers (1-50)   |
+
+
+#### Response
+
+Returns a JSON array of tourist spot objects with this structure:
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "category": "string",
+  "lat": float,
+  "lon": float,
+  "tags": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "location_details": {
+    "street": "string",
+    "city": "string",
+    "state": "string",
+    "country": "string"
+  }
+}
+
+**Example Request:**
+```bash
+curl -X GET "http://api.example.com/search_with_current_location?lat=37.7749&lon=-122.4194&radius=15"
+```
+
+**Example Response:**
+```json
+[
+  {
+    "id": "123456",
+    "name": "Golden Gate Park",
+    "category": "park",
+    "lat": 37.7694,
+    "lon": -122.4862,
+    "tags": {
+      "leisure": "park",
+      "wikidata": "Q1539788"
+    },
+    "location_details": {
+      "street": "",
+      "city": "San Francisco",
+      "state": "California",
+      "country": "United States"
+    }
+  }
+]
+```
+
+**Errors:**
+- 404: No location or spots found
+- 500: Internal server error (e.g., API failure)
+
+
+### 3. Get Weather Data
 **Endpoint:** `/weather`  
 **Method:** GET  
 **Description:** Retrieves current weather and forecast data for a given latitude and longitude using Open-Meteo API.
@@ -106,7 +178,7 @@ curl -X POST "http://localhost:8000/search" \
 
 **Example Request:**
 ```bash
-curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
+curl "https://ai-agent-based-trip-guider-main-production.up.railway.app/weather?lat=48.8584&lon=2.2945"
 ```
 
 **Example Response:**
@@ -126,7 +198,7 @@ curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
 - 404: Weather data unavailable
 - 500: Internal server error
 
-### 3. Generate Map (All Spots)
+### 4. Generate Map (All Spots)
 **Endpoint:** `/map/all`  
 **Method:** POST  
 **Description:** Generates an HTML map with markers for all tourist spots using Folium.
@@ -145,7 +217,7 @@ curl "http://localhost:8000/weather?lat=48.8584&lon=2.2945"
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/map/all" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/map/all" \
      -H "Content-Type: application/json" \
      -d '{"spots": [{"id": "123456", "name": "Eiffel Tower", "category": "attraction", "lat": 48.8584, "lon": 2.2945, "description": null, "tags": {"tourism": "attraction"}}], "center_lat": 48.8584, "center_lon": 2.2945, "radius": 5}'
 ```
@@ -159,7 +231,7 @@ curl -X POST "http://localhost:8000/map/all" \
 - 404: No tourist spots provided
 - 500: Internal server error
 
-### 4. Generate Map (Selected Spot)
+### 5. Generate Map (Selected Spot)
 **Endpoint:** `/map/selected`  
 **Method:** POST  
 **Description:** Generates an HTML map for a single tourist spot.
@@ -194,7 +266,7 @@ curl -X POST "http://localhost:8000/map/selected" \
 **Errors:**
 - 500: Internal server error
 
-### 5. Generate Description
+### 6. Generate Description
 **Endpoint:** `/generate_description`  
 **Method:** POST  
 **Description:** Generates a natural language description for a tourist spot using the Groq API.
@@ -215,7 +287,7 @@ curl -X POST "http://localhost:8000/map/selected" \
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/generate_description" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/generate_description" \
      -H "Content-Type: application/json" \
      -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"next_48h": {"rain_chance": true}}}}'
 ```
@@ -228,7 +300,7 @@ The Eiffel Tower in Paris, France, is an iconic iron marvel with stunning city v
 **Errors:**
 - 500: Internal server error (e.g., Groq API failure)
 
-### 6. Ask Question
+### 7. Ask Question
 **Endpoint:** `/ask_question`  
 **Method:** POST  
 **Description:** Answers a user's question about a tourist spot, leveraging weather data or Groq API for general queries.
@@ -250,7 +322,7 @@ The Eiffel Tower in Paris, France, is an iconic iron marvel with stunning city v
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8000/ask_question" \
+curl -X POST "https://ai-agent-based-trip-guider-main-production.up.railway.app/ask_question" \
      -H "Content-Type: application/json" \
      -d '{"spot_id": "123456", "spot_name": "Eiffel Tower", "spot_category": "attraction", "location": "Paris", "country": "France", "question": "Will it rain tomorrow?", "weather_data": {"temperature": 15.3, "description": "partly cloudy", "forecast": {"day1": {"rain_chance": false}, "day2": {"rain_chance": true}}}}'
 ```
